@@ -6,6 +6,7 @@ export default function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [listing, setListing] = useState(null);
+  const [seller, setSeller] = useState(null);
   const [images, setImages] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,10 @@ export default function ListingDetail() {
         setListing(found);
 
         if (found) {
+          try {
+            const sellerRes = await api.get(`/users/${found.user_id}`);
+            setSeller(sellerRes.data.user);
+          } catch (e) { setSeller(null); }
           try {
             const imagesRes = await api.get(`/listings/${id}/images`);
             setImages(imagesRes.data.images || []);
@@ -95,7 +100,7 @@ export default function ListingDetail() {
             </div>
           ) : (
             <div className="bg-gray-100 rounded-2xl h-72 flex items-center justify-center text-6xl">
-              ��
+              🧥
             </div>
           )}
         </div>
@@ -131,16 +136,22 @@ export default function ListingDetail() {
               👤
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-800">Seller</p>
-              <p className="text-xs text-gray-400">ID: {listing.user_id?.slice(0, 12)}...</p>
-              {isOwner && <p className="text-xs text-orange-500 font-medium">This is your listing</p>}
+              <p className="text-sm font-semibold text-gray-800">
+                {seller ? seller.name : 'Loading seller...'}
+              </p>
+              {seller?.location && (
+                <p className="text-xs text-gray-400">📍 {seller.location}</p>
+              )}
+              {isOwner && <p className="text-xs text-orange-500 font-medium mt-1">This is your listing</p>}
             </div>
           </div>
 
-          {/* Message seller — only if not owner */}
+          {/* Message seller */}
           {!isOwner && (
             <div className="border border-gray-100 rounded-2xl p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Message the Seller</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">
+                Message {seller ? seller.name : 'Seller'}
+              </h3>
               {sent ? (
                 <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
                   ✅ Message sent! Check your inbox for a reply.
