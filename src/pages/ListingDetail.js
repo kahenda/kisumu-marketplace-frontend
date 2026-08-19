@@ -13,8 +13,15 @@ export default function ListingDetail() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [currentUserID, setCurrentUserID] = useState('');
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setCurrentUserID(payload.user_id || '');
+    }
+
     const fetchAll = async () => {
       try {
         const listingRes = await api.get(`/listing/${id}`);
@@ -25,15 +32,11 @@ export default function ListingDetail() {
           try {
             const imagesRes = await api.get(`/listings/${id}/images`);
             setImages(imagesRes.data.images || []);
-          } catch (e) {
-            setImages([]);
-          }
+          } catch (e) { setImages([]); }
           try {
             const reviewsRes = await api.get(`/reviews/${found.user_id}`);
             setReviews(reviewsRes.data.reviews || []);
-          } catch (e) {
-            setReviews([]);
-          }
+          } catch (e) { setReviews([]); }
         }
       } catch (err) {
         console.error(err);
@@ -73,6 +76,8 @@ export default function ListingDetail() {
   if (loading) return <div className="text-center py-20 text-gray-400">Loading...</div>;
   if (!listing) return <div className="text-center py-20 text-gray-400">Listing not found</div>;
 
+  const isOwner = currentUserID === listing.user_id;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <button onClick={() => navigate('/')} className="text-sm text-orange-500 hover:underline mb-6 block">
@@ -90,7 +95,7 @@ export default function ListingDetail() {
             </div>
           ) : (
             <div className="bg-gray-100 rounded-2xl h-72 flex items-center justify-center text-6xl">
-              🧥
+              ��
             </div>
           )}
         </div>
@@ -116,36 +121,51 @@ export default function ListingDetail() {
             </span>
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-4 mb-6">
+          <div className="bg-gray-50 rounded-xl p-4 mb-4">
             <p className="text-sm text-gray-700 leading-relaxed">{listing.description}</p>
           </div>
 
-          <div className="border border-gray-100 rounded-2xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Message the Seller</h3>
-            {sent ? (
-              <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
-                ✅ Message sent! Check your inbox for a reply.
-              </div>
-            ) : (
-              <>
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-3 text-sm">{error}</div>}
-                <textarea
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Hi, is this still available?"
-                  rows={3}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={sending || !message.trim()}
-                  className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
-                >
-                  {sending ? 'Sending...' : 'Send Message'}
-                </button>
-              </>
-            )}
+          {/* Seller info */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-bold text-lg">
+              👤
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Seller</p>
+              <p className="text-xs text-gray-400">ID: {listing.user_id?.slice(0, 12)}...</p>
+              {isOwner && <p className="text-xs text-orange-500 font-medium">This is your listing</p>}
+            </div>
           </div>
+
+          {/* Message seller — only if not owner */}
+          {!isOwner && (
+            <div className="border border-gray-100 rounded-2xl p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Message the Seller</h3>
+              {sent ? (
+                <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+                  ✅ Message sent! Check your inbox for a reply.
+                </div>
+              ) : (
+                <>
+                  {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-3 text-sm">{error}</div>}
+                  <textarea
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="Hi, is this still available?"
+                    rows={3}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={sending || !message.trim()}
+                    className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+                  >
+                    {sending ? 'Sending...' : 'Send Message'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
