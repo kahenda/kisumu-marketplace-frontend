@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUnread = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userID = payload.user_id;
+
+        const res = await api.get('/messages/inbox');
+        const messages = res.data.messages || [];
+        const received = messages.filter(m => m.receiver_id === userID);
+        setUnread(received.length);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -19,7 +45,14 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link to="/" className="text-sm text-gray-600 hover:text-orange-500">Browse</Link>
             <Link to="/post" className="text-sm text-gray-600 hover:text-orange-500">Sell</Link>
-            <Link to="/inbox" className="text-sm text-gray-600 hover:text-orange-500">Messages</Link>
+            <Link to="/inbox" className="text-sm text-gray-600 hover:text-orange-500 relative">
+              Messages
+              {unread > 0 && (
+                <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </Link>
             <button onClick={handleLogout} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg text-gray-700">Logout</button>
           </div>
         ) : (
