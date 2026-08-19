@@ -6,6 +6,8 @@ export default function Inbox() {
   const [loading, setLoading] = useState(true);
   const [userID, setUserID] = useState('');
   const [selected, setSelected] = useState(null);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -13,19 +15,38 @@ export default function Inbox() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserID(payload.user_id || '');
     }
-
-    const fetchInbox = async () => {
-      try {
-        const res = await api.get('/messages/inbox');
-        setMessages(res.data.messages || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInbox();
+    fetchMessages();
   }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await api.get('/messages/inbox');
+      setMessages(res.data.messages || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReply = async () => {
+    if (!reply.trim() || !selected) return;
+    setSending(true);
+    try {
+      const otherID = selected.sender_id === userID ? selected.receiver_id : selected.sender_id;
+      await api.post('/messages', {
+        receiver_id: otherID,
+        listing_id: selected.listing_id,
+        body: reply,
+      });
+      setReply('');
+      await fetchMessages();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (loading) return <div className="text-center py-20 text-gray-400">Loading messages...</div>;
 
@@ -35,18 +56,16 @@ export default function Inbox() {
       m.listing_id === selected.listing_id &&
       ((m.sender_id === selected.sender_id && m.receiver_id === selected.receiver_id) ||
        (m.sender_id === selected.receiver_id && m.receiver_id === selected.sender_id))
-    );
+    ).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <button
-          onClick={() => setSelected(null)}
-          className="text-sm text-orange-500 hover:underline mb-6 block"
-        >
+        <button onClick={() => setSelected(null)} className="text-sm text-orange-500 hover:underline mb-6 block">
           ← Back to inbox
         </button>
         <h2 className="text-xl font-bold text-gray-900 mb-6">Conversation</h2>
-        <div className="space-y-3 mb-6">
+
+        <div className="space-y-3 mb-6 min-h-40">
           {conversation.map(msg => {
             const isMine = msg.sender_id === userID;
             return (
@@ -61,11 +80,29 @@ export default function Inbox() {
             );
           })}
         </div>
+
+        {/* Reply box */}
+        <div className="border border-gray-200 rounded-2xl p-4">
+          <textarea
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            placeholder="Type your reply..."
+            rows={3}
+          />
+          <button
+            onClick={handleReply}
+            disabled={sending || !reply.trim()}
+            className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+          >
+            {sending ? 'Sending...' : 'Send Reply'}
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Group messages by conversation
+  // Group by conversation
   const grouped = {};
   messages.forEach(msg => {
     const key = `${msg.listing_id}-${[msg.sender_id, msg.receiver_id].sort().join('-')}`;
