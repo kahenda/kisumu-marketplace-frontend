@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+  baseURL: 'https://market-place-9qdu.onrender.com',
 });
 
 api.interceptors.request.use((config) => {
