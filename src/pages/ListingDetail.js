@@ -15,6 +15,11 @@ export default function ListingDetail() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [currentUserID, setCurrentUserID] = useState('');
+  const [phone, setPhone] = useState('');
+  const [paying, setPaying] = useState(false);
+  const [paySuccess, setPaySuccess] = useState(false);
+  const [payError, setPayError] = useState('');
+  const [showPayForm, setShowPayForm] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -28,7 +33,6 @@ export default function ListingDetail() {
         const listingRes = await api.get(`/listing/${id}`);
         const found = listingRes.data.listing;
         setListing(found);
-
         if (found) {
           try {
             const sellerRes = await api.get(`/users/${found.user_id}`);
@@ -68,6 +72,24 @@ export default function ListingDetail() {
       setError(err.response?.data?.error || 'Failed to send message');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handlePay = async () => {
+    if (!phone.trim()) return;
+    setPaying(true);
+    setPayError('');
+    try {
+      await api.post('/mpesa/pay', {
+        phone: phone,
+        amount: listing.price,
+        listing_id: id,
+      });
+      setPaySuccess(true);
+    } catch (err) {
+      setPayError(err.response?.data?.error || 'Payment failed. Try again.');
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -146,35 +168,85 @@ export default function ListingDetail() {
             </div>
           </div>
 
-          {/* Message seller */}
           {!isOwner && (
-            <div className="border border-gray-100 rounded-2xl p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">
-                Message {seller ? seller.name : 'Seller'}
-              </h3>
-              {sent ? (
-                <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
-                  ✅ Message sent! Check your inbox for a reply.
-                </div>
+            <div className="space-y-3">
+              {/* Buy Now button */}
+              {!showPayForm ? (
+                <button
+                  onClick={() => setShowPayForm(true)}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition"
+                >
+                  💳 Buy Now via M-Pesa — KES {Number(listing.price)?.toLocaleString()}
+                </button>
               ) : (
-                <>
-                  {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-3 text-sm">{error}</div>}
-                  <textarea
-                    value={message}
-                    onChange={e => setMessage(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Hi, is this still available?"
-                    rows={3}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={sending || !message.trim()}
-                    className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
-                  >
-                    {sending ? 'Sending...' : 'Send Message'}
-                  </button>
-                </>
+                <div className="border border-green-200 rounded-2xl p-4 bg-green-50">
+                  <h3 className="font-semibold text-gray-900 mb-3">💳 Pay with M-Pesa</h3>
+                  {paySuccess ? (
+                    <div className="bg-green-100 text-green-700 p-3 rounded-lg text-sm">
+                      ✅ STK Push sent! Check your phone and enter your M-Pesa PIN to complete payment.
+                    </div>
+                  ) : (
+                    <>
+                      {payError && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-3 text-sm">{payError}</div>}
+                      <p className="text-sm text-gray-600 mb-3">
+                        Amount: <strong>KES {Number(listing.price)?.toLocaleString()}</strong>
+                      </p>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 mb-3"
+                        placeholder="Enter M-Pesa number e.g. 0712345678"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handlePay}
+                          disabled={paying || !phone.trim()}
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+                        >
+                          {paying ? 'Processing...' : 'Send M-Pesa Prompt'}
+                        </button>
+                        <button
+                          onClick={() => setShowPayForm(false)}
+                          className="px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
+
+              {/* Message seller */}
+              <div className="border border-gray-100 rounded-2xl p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  Message {seller ? seller.name : 'Seller'}
+                </h3>
+                {sent ? (
+                  <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+                    ✅ Message sent! Check your inbox for a reply.
+                  </div>
+                ) : (
+                  <>
+                    {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-3 text-sm">{error}</div>}
+                    <textarea
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      placeholder="Hi, is this still available?"
+                      rows={3}
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={sending || !message.trim()}
+                      className="w-full mt-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
+                    >
+                      {sending ? 'Sending...' : 'Send Message'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
