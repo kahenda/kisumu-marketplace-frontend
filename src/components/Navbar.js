@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -17,7 +18,6 @@ export default function Navbar() {
         if (!token) return;
         const payload = JSON.parse(atob(token.split('.')[1]));
         const userID = payload.user_id;
-
         const res = await api.get('/messages/inbox');
         const messages = res.data.messages || [];
         const received = messages.filter(m => m.receiver_id === userID);
@@ -31,6 +31,13 @@ export default function Navbar() {
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Clear badge when on inbox page
+  useEffect(() => {
+    if (location.pathname === '/inbox') {
+      setUnread(0);
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
