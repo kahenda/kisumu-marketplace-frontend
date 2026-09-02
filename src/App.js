@@ -8,6 +8,7 @@ import PostListing from './pages/PostListing';
 import ListingDetail from './pages/ListingDetail';
 import Inbox from './pages/Inbox';
 import MyListings from './pages/MyListings';
+import LeaveReview from './pages/LeaveReview';
 import Navbar from './components/Navbar';
 
 function ProtectedRoute({ children }) {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/post" element={<ProtectedRoute><PostListing /></ProtectedRoute>} />
           <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
           <Route path="/my-listings" element={<ProtectedRoute><MyListings /></ProtectedRoute>} />
+          <Route path="/review" element={<ProtectedRoute><LeaveReview /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
