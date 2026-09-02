@@ -11,7 +11,6 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user) return;
-
     const fetchUnread = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -26,17 +25,13 @@ export default function Navbar() {
         console.error(err);
       }
     };
-
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
-  // Clear badge when on inbox page
   useEffect(() => {
-    if (location.pathname === '/inbox') {
-      setUnread(0);
-    }
+    if (location.pathname === '/inbox') setUnread(0);
   }, [location.pathname]);
 
   const handleLogout = () => {
@@ -52,6 +47,7 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link to="/" className="text-sm text-gray-600 hover:text-orange-500">Browse</Link>
             <Link to="/post" className="text-sm text-gray-600 hover:text-orange-500">Sell</Link>
+            <Link to="/my-listings" className="text-sm text-gray-600 hover:text-orange-500">My Listings</Link>
             <Link to="/inbox" className="text-sm text-gray-600 hover:text-orange-500 relative">
               Messages
               {unread > 0 && (
